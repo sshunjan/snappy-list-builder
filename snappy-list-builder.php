@@ -101,6 +101,13 @@ add_action('wp_ajax_slb_save_subscription', 'slb_save_subscription'); // for adm
 // load external files
 add_action('wp_enqueue_scripts', 'slb_public_scripts');
 
+//1.10
+// Advanced Custom Fields Settings
+add_filter('acf/settings/path', 'slb_acf_settings_path');
+add_filter('acf/settings/dir', 'slb_acf_settings_dir');
+add_filter('acf/settings/show_admin', 'slb_acf_show_admin');
+if( !defined('ACF_LITE') ) define('ACF_LITE',true); // turn off ACF plugin menu
+
 /***********************************************************************************************************************/
 
 
@@ -656,7 +663,9 @@ function slb_public_scripts(){
   }
 
 /* !7. CUSTOM POST TYPES */
-
+// 7.1
+// subscribers
+include_once( plugin_dir_path( __FILE__ ) . 'cpt/slb_subscriber.php');
 
 
 
