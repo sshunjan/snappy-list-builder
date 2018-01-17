@@ -1,157 +1,145 @@
 <?php
- //include 'functions.php';
+
 /*
-	Plugin Name: Snappy List Builder
-	Plugin URI:  www.example.com
-	Description: The ultimate email list builder.
-	Version: 1.0
-	Author: Simran
-	Author URI: www.facebaook.com/perfectfurnishers
-	License: GPL2
-	License URI: ex.com
-	Text Domain: Mail-Plugin
+Plugin Name: Snappy List Builder
+Plugin URI: http://wordpressplugincourse.com/plugins/snappy-list-builder
+Description: The ultimate email list building plugin for WordPress. Capture new subscribers. Reward subscribers with a custom download upon opt-in. Build unlimited lists. Import and export subscribers easily with .csv
+Version: 1.0
+Author: Joel Funk @ Code College
+Author URI: http://joelfunk.codecollege.ca
+License: GPL2
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: snappy-list-builder
 */
 
-/* !0 Table of contents  */
+
+/* !0. TABLE OF CONTENTS */
 
 /*
-	1. Hooks
-		1.1 - register all shotcodes to init
+
+	1. HOOKS
+		1.1 - registers all our custom shortcodes
 		1.2 - register custom admin column headers
 		1.3 - register custom admin column data
-	    1.4 - registers custom list column headers
-	    1.5 - registers custom question column headers
-		1.6 - registers custom question column data
-		1.7 - register custom list column data
-		1.8 - register ajax actions
+		1.4 - register ajax actions
+		1.5 - load external files to public website
 
-	2. Shortcodes
+	2. SHORTCODES
 		2.1 - slb_register_shortcodes()
-		2.2 - slb_form_shorcode()
+		2.2 - slb_form_shortcode()
 
-	3. Filters
-		3.1 - slb_subscribers_column_headers()
-		3.2 - slb_subscribers_column_headers()
-		3.2.2 - slb_register_custom_admin_titles()
-		3.2.3 - slb_custom_admin_titles()
+	3. FILTERS
+		3.1 - slb_subscriber_column_headers()
+		3.2 - slb_subscriber_column_data()
 		3.3 - slb_list_column_headers()
 		3.4 - slb_list_column_data()
-		3.5 - slb_question_column_data()
 
-	4. External Scripts
+	4. EXTERNAL SCRIPTS
+		4.1 - slb_public_scripts()
 
-	5. Actions
-		5.1 - save subscription data to an existing or a new subscriber
+	5. ACTIONS
+		5.1 - slb_save_subscription()
 		5.2 - slb_save_subscriber()
 		5.3 - slb_add_subscription()
 
-	6. Helpers
-		6.1 - slb_subscriber_has_subscription()
+	6. HELPERS
+		6.1 - slb_has_subscriptions()
 		6.2 - slb_get_subscriber_id()
-		6.3 - slb_get_subscriptions()
+		6.3 - slb_get_subscritions()
 		6.4 - slb_return_json()
 		6.5 - slb_get_acf_key()
 		6.6 - slb_get_subscriber_data()
 
-	7. Custom Post Types
+	7. CUSTOM POST TYPES
 
-	8. Admin Pages
+	8. ADMIN PAGES
 
-	9. Settings
+	9. SETTINGS
+
 */
+
+
+
 
 /* !1. HOOKS */
 
-//@ 1.1
-// register all shotcodes to init
-add_action( 'init', 'slb_register_shortcodes' );
+// 1.1
+// hint: registers all our custom shortcodes on init
+add_action('init', 'slb_register_shortcodes');
 
-//1.2
-// register custom admin column headers
-add_filter('manage_edit-slb_subscriber_columns', 'slb_subscriber_column_headers');
+// 1.2
+// hint: register custom admin column headers
+add_filter('manage_edit-slb_subscriber_columns','slb_subscriber_column_headers');
+add_filter('manage_edit-slb_list_columns','slb_list_column_headers');
 
-//1.3
-// registers custom admin column data
-add_filter('manage_slb_subscriber_posts_custom_column', 'slb_subscriber_column_data', 1, 2);
-add_action('admin_head-edit.php', 'slb_register_custom_admin_titles');
+// 1.3
+// hint: register custom admin column data
+add_filter('manage_slb_subscriber_posts_custom_column','slb_subscriber_column_data',1,2);
+add_filter('manage_slb_list_posts_custom_column','slb_list_column_data',1,2);
 
-//1.4
-//registers custom list column headers
-add_filter('manage_edit-slb_list_columns', 'slb_list_column_headers');
+// 1.4
+// hint: register ajax actions
+add_action('wp_ajax_nopriv_slb_save_subscription', 'slb_save_subscription'); // regular website visitor
+add_action('wp_ajax_slb_save_subscription', 'slb_save_subscription'); // admin user
 
-//1.5
-//registers custom question column headers
-add_filter('manage_edit-slb_question_columns', 'sbl_question_column_headers');
+// 1.5
+// load external files to public website
+add_action('wp_enqueue_scripts', 'slb_public_scripts');
 
-//1.6
-//registers custom question column data
-add_filter('manage_slb_question_posts_custom_column', 'slb_question_column_data', 1, 2);
-
-//1.7
-//register custom list column data
-add_filter('manage_slb_list_posts_custom_column', 'slb_list_column_data', 1, 2);
-
-//1.8
-//register ajax actions
-add_action('wp_ajax_nopriv_slb_save_subscription', 'slb_save_subscription'); // for user
-add_action('wp_ajax_slb_save_subscription', 'slb_save_subscription'); // for admins
-
-//1.9
-// load external files
-add_action('wp_enqueue_script', 'slb_public_scripts');
-
-/***********************************************************************************************************************/
-
-
-/* 2. SHORTCODES */
+/* !2. SHORTCODES */
 
 // 2.1
-// registers all the custom shortcodes
+// hint: registers all our custom shortcodes
 function slb_register_shortcodes() {
-	add_shortcode( 'slb_form', 'slb_form_shortcode' );
+
+	add_shortcode('slb_form', 'slb_form_shortcode');
+
 }
 
 // 2.2
-// returns a html string for email capture form
+// hint: returns a html string for a email capture form
 function slb_form_shortcode( $args, $content="") {
 
+	// get the list id
 	$list_id = 0;
-	if(isset($args['id'])) {$list_id = (int)$args['id'];}
+	if( isset($args['id']) ) $list_id = (int)$args['id'];
 
-	// setup the output variable - the form html
+	// setup our output variable - the form html
 	$output = '
 
 		<div class="slb">
 
 			<form id="slb_form" name="slb_form" class="slb-form" method="post"
-			action="'.site_url().'/wp-admin/admin-ajax.php?action=slb_save_subscription" >
+			action="/wp-admin/admin-ajax.php?action=slb_save_subscription" method="post">
 
-				<input type="hidden" name="slb_list" value ="' . $list_id . '" >
+				<input type="hidden" name="slb_list" value="'. $list_id .'">
 
-				<p class="slb-input-container-class">
+				<p class="slb-input-container">
 
-					<label> Name </label><br />
-					<input type="text" name="slb_fname" placeholder="First Name">
-					<input type="text" name="slb_lname" placeholder="Last Name">
+					<label>Your Name</label><br />
+					<input type="text" name="slb_fname" placeholder="First Name" />
+					<input type="text" name="slb_lname" placeholder="Last Name" />
 
 				</p>
 
-				<p class="slb-input-container-class">
+				<p class="slb-input-container">
 
-					<label> Your Email </label><br />
-					<input type="email" name="slb_email" placeholder="ex. you@email.com">
+					<label>Your Email</label><br />
+					<input type="email" name="slb_email" placeholder="ex. you@email.com" />
 
 				</p>';
 
-				if(strlen($content)):
+				// including content in our form html if content is passed into the function
+				if( strlen($content) ):
 
-					$output .= '<div class="slb-content">' . wpautop($content) . '</div>';
+					$output .= '<div class="slb-content">'. wpautop($content) .'</div>';
 
 				endif;
 
-				$output .= '<p class="slb-input-container-class">
+				// completing our form html
+				$output .= '<p class="slb-input-container">
 
-					<input type="submit" name="slb_submit" placeholder="Sign me up !">
+					<input type="submit" name="slb_submit" value="Sign Me Up!" />
 
 				</p>
 
@@ -161,505 +149,474 @@ function slb_form_shortcode( $args, $content="") {
 
 	';
 
-	// return the results
+	// return our results/html
 	return $output;
+
 }
 
-/***********************************************************************************************************************/
 
-/* 3. FILTERS*/
+
+
+/* !3. FILTERS */
 
 // 3.1
- function slb_subscriber_column_headers($columns){
+function slb_subscriber_column_headers( $columns ) {
 
- 	// creating column header data
- 	$columns = array(
- 		'cb' => '<input type="checkbox" />',
- 		'title' => __('Subscriber Name'),
- 		'email' => __('Email Address'),
- 		'subscriptions' => __('Subscriptions')
- 	);
+	// creating custom column header data
+	$columns = array(
+		'cb'=>'<input type="checkbox" />',
+		'title'=>__('Subscriber Name'),
+		'email'=>__('Email Address'),
+	);
 
- 	return $columns;
- }
-
- // 3.2
- function slb_subscriber_column_data($column, $post_id){
-
- 	$output = '';
-
- 	switch($column) {
- 		case 'title':
- 			  $fname = get_field('slb_fname', $post_id);
- 			  $lname = get_field('slb_lname', $post_id);
- 			  $output .= $fname . ' ' . $lname;
- 			  break;
- 		case 'email':
- 			  $email = get_field('slb_email', $post_id);
- 			  $output .= $email;
- 			  break;
- 		case 'subscriptions':
-              $list_items = get_field('slb_subscriptions');
-
-              for($i = 0; $i < count($list_items); $i++){
-
-              	$post = $list_items[$i];
-				setup_postdata( $post );
-
-              	if($i == count($list_items)-1){
-              		$output .= $post->post_title;
-              	}
-              	else{
-              		$output .= $post->post_title . ', ';
-              	}
-              }
-
-              wp_reset_postdata();
-              break;
- 	}
-
- 	echo $output;
- }
-
- // 3.2.2
- // register special custome admin title columns
- function slb_register_custom_admin_titles(){
- 	add_filter('the_title','slb_custom_admin_titles', 99,2);
- }
-
-// 3.2.3
-// handles custom admin title "title" column data for post types without title
- function slb_custom_admin_titles($title, $post_id){
-
- 	global $post;
-
- 	$output = $title;
-
- 	if(isset($post->post_type)){
-
- 		switch($post->post_type){
- 			case 'slb_subscriber':
- 					$fname = get_field('slb_fname', $post_id);
- 					$lname = get_field('slb_lname',$post_id);
- 					$output = $fname . ' ' . $lname;
- 					break;
- 			case 'slb_question':
- 					$ques = get_field('slb_ques', $post_id);
- 					$output = $ques;
- 					break;
- 		}
- 	}
-
- 	return $output;
- }
-
- //3.3
-  function slb_list_column_headers($columns){
-
-  	$columns = array(
-  		'cb' => '<input type="checkbox">',
-  		'title' => __('List Name'),
-  		'shortcode' => __('Shortcode'),
-  		'date' => __('Date')
-  	);
-
-  	return $columns;
-  }
-
- //3.3.2
-  function slb_list_column_data($column, $post_id){
-
-  	$output = '';
-
-  	switch ($column) {
-  		case 'shortcode':
-  			$output .= '[slb_form id="'. $post_id .'"]';
-  			break;
-  	}
-
-  	echo $output;
-  }
-
- //3.4
-  function sbl_question_column_headers( $columns){
-
-  	$columns = array(
-  		'cb' => '<input type="checkbox />',
-  		'title' => __('Questions'),
-  		'email' => __('Email')
-  	);
-
-  	return $columns;
-  }
-
-   // 3.5
- function slb_question_column_data($column, $post_id){
-
- 	$output = '';
-
- 	switch($column) {
- 		case 'title':
- 			  $ques = get_field('slb_ques', $post_id);
- 			  $output .= $ques;
- 			  break;
- 		case 'email':
- 			  $email = get_field('slb_question_email', $post_id);
- 			  $output .= $email;
- 			  break;
- 		}
-
- 		echo $output;
- 	}
-
-/***********************************************************************************************************************/
-
-
-/* 4. EXTERNAL SCRIPTS*/
-// 4.1
-// loads external files into PUBLIC website
-function slb_public_scripts(){
-
-    // register scripts with wordpress's internal library
-    wp_register_script('snappy-list-builder-js', plugins_url('/js/public/snappy-list-builder.js', __FILE__),
-    array('jquery'),'',true);
-
-    // add to que of scripts that get loaded into every page
-    wp_enqueue_script('snappy-list-builder-js');
+	// returning new columns
+	return $columns;
 
 }
 
-/***********************************************************************************************************************/
+// 3.2
+function slb_subscriber_column_data( $column, $post_id ) {
+
+	// setup our return text
+	$output = '';
+
+	switch( $column ) {
+
+		case 'name':
+			// get the custom name data
+			$fname = get_field('slb_fname', $post_id );
+			$lname = get_field('slb_lname', $post_id );
+			$output .= $fname .' '. $lname;
+			break;
+		case 'email':
+			// get the custom email data
+			$email = get_field('slb_email', $post_id );
+			$output .= $email;
+			break;
+
+	}
+
+	// echo the output
+	echo $output;
+
+}
+
+// 3.3
+function slb_list_column_headers( $columns ) {
+
+	// creating custom column header data
+	$columns = array(
+		'cb'=>'<input type="checkbox" />',
+		'title'=>__('List Name'),
+		'shortcode'=>__('Shortcode'),
+	);
+
+	// returning new columns
+	return $columns;
+
+}
+
+// 3.2
+function slb_list_column_data( $column, $post_id ) {
+
+	// setup our return text
+	$output = '';
+
+	switch( $column ) {
+
+		case 'shortcode':
+			$output .= '[slb_form id="'. $post_id .'"]';
+			break;
+
+	}
+
+	// echo the output
+	echo $output;
+
+}
 
 
-/* 5. ACTIONS*/
+
+
+/* !4. EXTERNAL SCRIPTS */
+
+// 4.1
+// hint: loads external files into PUBLIC website
+function slb_public_scripts() {
+
+	// register scripts with WordPress's internal library
+	wp_register_script('snappy-list-builder-js-public', plugins_url('/js/public/snappy-list-builder.js',__FILE__), array('jquery'),'',true);
+
+	// add to que of scripts that get loaded into every page
+	wp_enqueue_script('snappy-list-builder-js-public');
+
+}
+
+
+
+
+/* !5. ACTIONS */
+
 // 5.1
-//  save subscription data to an existing or a new subscriber
- function slb_save_subscription(){
+// hint: saves subscription data to an existing or new subscriber
+function slb_save_subscription() {
 
- 	// setup default result data
- 	$result = array(
- 		'status' => 0,
- 		'message' => 'Subscription was not saved',
- 		'error' => '',
- 		'errors' => array()
- 	);
+	// setup default result data
+	$result = array(
+		'status' => 0,
+		'message' => 'Subscription was not saved. ',
+		'error'=>'',
+		'errors'=>array()
+	);
 
- 	try{
+	try {
 
- 		//get list id
- 		$list_id = (int)$_POST['slb_list'];
+		// get list_id
+		$list_id = (int)$_POST['slb_list'];
 
- 		//prepare subscriber data
- 		$subscriber_data = array(
- 			'fname' => esc_attr( $_POST['slb_fname']),
- 			'lname' => esc_attr($_POST['slb_lname']),
- 			'email' => esc_attr($_POST['slb_email'])
- 		);
+		// prepare subscriber data
+		$subscriber_data = array(
+			'fname'=> esc_attr( $_POST['slb_fname'] ),
+			'lname'=> esc_attr( $_POST['slb_lname'] ),
+			'email'=> esc_attr( $_POST['slb_email'] ),
+		);
 
- 		// setup error array
- 		// array for storing errors
- 		$errors = [];
+		// setup our errors array
+		$errors = array();
 
- 		// form validation
- 		if(!strlen($subscriber_data['fname'])) { $errors['fname'] = "First name is required.";}
+		// form validation
+		if( !strlen( $subscriber_data['fname'] ) ) $errors['fname'] = 'First name is required.';
+		if( !strlen( $subscriber_data['email'] ) ) $errors['email'] = 'Email address is required.';
+		if( strlen( $subscriber_data['email'] ) && !is_email( $subscriber_data['email'] ) ) $errors['email'] = 'Email address must be valid.';
 
- 		if(!strlen($subscriber_data['email'])) { $errors['email'] = "Email address is required.";}
+		// IF there are errors
+		if( count($errors) ):
 
- 		if(strlen($subscriber_data['email']) && !is_email($subscriber_data['email'])){
- 			$errors['email'] = "Email address must be valid.";
- 		}
+			// append errors to result structure for later use
+			$result['error'] = 'Some fields are still required. ';
+			$result['errors'] = $errors;
 
+		else:
+		// IF there are no errors, proceed...
 
- 		if(count($errors)){
+			// attempt to create/save subscriber
+			$subscriber_id = slb_save_subscriber( $subscriber_data );
 
- 			$result['error'] = "Some fields are still required.";
- 			$result['errors'] = $errors;
- 		}
- 		else{
-	 		//attempt to create subscriber id
-	 		$subscriber_id = slb_save_subscriber($subscriber_data);
+			// IF subscriber was saved successfully $subscriber_id will be greater than 0
+			if( $subscriber_id ):
 
-	 		// If subscriber was not saved successfully, the method will return 0,
-	 		if($subscriber_id){
+				// IF subscriber already has this subscription
+				if( slb_subscriber_has_subscription( $subscriber_id, $list_id ) ):
 
-	 			// If the subscriber is already subscribed to that list
-	 			$has_subscription = slb_subscriber_has_subscription($subscriber_id, $list_id);
+					// get list object
+					$list = get_post( $list_id );
 
-	 			if($has_subscription){
+					// return detailed error
+					$result['error'] = esc_attr( $subscriber_data['email'] .' is already subscribed to '. $list->post_title .'.');
 
-	 				$list = get_post($list_id);
+				else:
 
-	 				$result['error'] = esc_attr($subscriber_data['email'] . ' is already subscribed to ' . $list->post_title . '.');
+					// save new subscription
+					$subscription_saved = slb_add_subscription( $subscriber_id, $list_id );
 
-	 			}
-	 			else{
+					// IF subscription was saved successfully
+					if( $subscription_saved ):
 
-	 				// Add the subscription to the subscriber's list
-	 				$subscription_saved = slb_add_subscription($subscriber_id, $list_id);
+						// subscription saved!
+						$result['status']=1;
+						$result['message']='Subscription saved';
 
-	 				if($subscription_saved){
-	 					$result['status'] = 1;
-	 					$result['message'] = 'Subscription saved';
-	 				}
-	 				else{
-	 					$result['error'] = "Unable to save subscription.";
-	 				}
-	 			}
-	 		}
- 		}
- 	}
- 	catch (Exception $e){
+					else:
 
- 		// a php exception
- 		$result['error'] = 'Caught exception' . $e->getMessage();
- 	}
-
- 	$email = get_field('slb_email', $subscriber_id);
-
- 	foreach($email as $e){
- 		echo $e;
- 	}
-
- 	// return result as json
- 	slb_return_json($result);
+						// return detailed error
+						$result['error'] = 'Unable to save subscription.';
 
 
- }
+					endif;
 
- // 5.2 //Check
- function slb_save_subscriber( $subscriber_data){
+				endif;
 
- 	//setup default subscriber id
- 	//0 means subscriber was not saved
- 	$subscriber_id = 0;
+			endif;
 
- 	try{
+		endif;
 
- 		$subscriber_id = slb_get_subscriber_id($subscriber_data['email']);
+	} catch ( Exception $e ) {
 
- 		// If subscriber does not exist
-		if(!$subscriber_id){
+	}
 
+	// return result as json
+	slb_return_json($result);
+
+}
+
+// 5.2
+// hint: creates a new subscriber or updates and existing one
+function slb_save_subscriber( $subscriber_data ) {
+
+	// setup default subscriber id
+	// 0 means the subscriber was not saved
+	$subscriber_id = 0;
+
+	try {
+
+		$subscriber_id = slb_get_subscriber_id( $subscriber_data['email'] );
+
+		// IF the subscriber does not already exists...
+		if( !$subscriber_id ):
+
+			// add new subscriber to database
 			$subscriber_id = wp_insert_post(
 				array(
-					  'post_type' => 'slb_subscriber',
-				      'fname' => $subscriber_data['fname'] . ' ' . $subscriber_data['lname'],
-				      'post_status' => 'publish'
-			         ),
-			         true
+					'post_type'=>'slb_subscriber',
+					'post_title'=>$subscriber_data['fname'] .' '. $subscriber_data['lname'],
+					'post_status'=>'publish',
+				),
+				true
 			);
 
-		}
+		endif;
 
+		// add/update custom meta data
 		update_field(slb_get_acf_key('slb_fname'), $subscriber_data['fname'], $subscriber_id);
 		update_field(slb_get_acf_key('slb_lname'), $subscriber_data['lname'], $subscriber_id);
 		update_field(slb_get_acf_key('slb_email'), $subscriber_data['email'], $subscriber_id);
 
- 	} catch( Exception $e){ }
+	} catch( Exception $e ) {
 
- 	return $subscriber_id;
- }
+		// a php error occurred
 
- // 5.3
-  function slb_add_subscription($subscriber_id, $list_id){
+	}
 
-  	//setup default return value
-  	$subscription_saved = false;
+	// return subscriber_id
+	return $subscriber_id;
 
+}
 
-  	// IF subscriber does NOT have the current list subscription
-  	if(!slb_subscriber_has_subscription($subscriber_id, $list_id)){
+// 5.3
+// hint: adds list to subscribers subscriptions
+function slb_add_subscription( $subscriber_id, $list_id ) {
 
-  		$subscriptions = array();
+	// setup default return value
+	$subscription_saved = false;
 
-  		// get subscriptions and append new $list id
-  		$subscriptions = slb_get_subscriptions($subscriber_id);
-  		$subscriptions[]= $list_id;
+	// IF the subscriber does NOT have the current list subscription
+	if( !slb_subscriber_has_subscription( $subscriber_id, $list_id ) ):
 
+		// get subscriptions and append new $list_id
+		$subscriptions = slb_get_subscriptions( $subscriber_id );
+		$subscriptions[]=$list_id;
 
-  		// update slb subscriptions
-  		update_field(slb_get_acf_key('slb_subscriptions'), $subscriptions, $subscriber_id);
+		// update slb_subscriptions
+		update_field( slb_get_acf_key('slb_subscriptions'), $subscriptions, $subscriber_id );
 
-  		// subscriptions update
-  		$subscription_saved = true;
-  	}
+		// subscriptions updated!
+		$subscription_saved = true;
 
-  	return $subscription_saved;
-  }
+	endif;
 
-/***********************************************************************************************************************/
+	// return result
+	return $subscription_saved;
 
-
-/* 6. HELPERS */
-
-//6.1
- function slb_subscriber_has_subscription( $subscriber_id, $list_id){
-
- 	// setup default return value
- 	$has_subscription = false;
-
- 	// get subscriber
- 	$subscriber = get_post();
-
- 	// get subscriptions
- 	$subscriptions = slb_get_subscriptions($subscriber_id);
-
- 	// check subscriptions for list
- 	if(in_array($list_id, $subscriptions)){
- 		$has_subscription = true;
- 	}
-
- 	return $has_subscription;
- }
-
-// 6.2 // Check
- function slb_get_subscriber_id($email){
-
- 	$subscriber_id = 0;
-
- 	try{
-
- 		$subscriber_query = new WP_Query(
- 			array(
- 				  'post_type' => 'slb_subscriber',
- 				  'posts_per_page' => 1,
- 				  'meta_key' => 'slb_email',
- 				  'meta_query' => array(
- 				  		array(
- 				  			'key' => 'slb_email',
- 				  			'value' => $email,
- 				  			'compare' => '='
- 				  			),
- 				  		),
- 				  )
- 		);
-
- 		if($subscriber_query -> have_posts()){
-
- 			$subscriber_query -> the_post();
- 			$subscriber_id = get_the_ID();
- 		}
-
- 	} catch( Exception $e){
-
- 	}
-
- 	wp_reset_query();
+}
 
 
- 	return (int)$subscriber_id;
- }
+
+
+
+/* !6. HELPERS */
+
+// 6.1
+// hint: returns true or false
+function slb_subscriber_has_subscription( $subscriber_id, $list_id ) {
+
+	// setup default return value
+	$has_subscription = false;
+
+	// get subscriber
+	$subscriber = get_post($subscriber_id);
+
+	// get subscriptions
+	$subscriptions = slb_get_subscriptions( $subscriber_id );
+
+	// check subscriptions for $list_id
+	if( in_array($list_id, $subscriptions) ):
+
+		// found the $list_id in $subscriptions
+		// this subscriber is already subscribed to this list
+		$has_subscription = true;
+
+	else:
+
+		// did not find $list_id in $subscriptions
+		// this subscriber is not yet subscribed to this list
+
+	endif;
+
+	return $has_subscription;
+
+}
+
+// 6.2
+// hint: retrieves a subscriber_id from an email address
+function slb_get_subscriber_id( $email ) {
+
+	$subscriber_id = 0;
+
+	try {
+
+		// check if subscriber already exists
+		$subscriber_query = new WP_Query(
+			array(
+				'post_type'		=>	'slb_subscriber',
+				'posts_per_page' => 1,
+				'meta_key' => 'slb_email',
+				'meta_query' => array(
+				    array(
+				        'key' => 'slb_email',
+				        'value' => $email,  // or whatever it is you're using here
+				        'compare' => '=',
+				    ),
+				),
+			)
+		);
+
+		// IF the subscriber exists...
+		if( $subscriber_query->have_posts() ):
+
+			// get the subscriber_id
+			$subscriber_query->the_post();
+			$subscriber_id = get_the_ID();
+
+		endif;
+
+	} catch( Exception $e ) {
+
+		// a php error occurred
+
+	}
+
+	// reset the Wordpress post object
+	wp_reset_query();
+
+	return (int)$subscriber_id;
+
+}
 
 // 6.3
- //  get subscriptions
- //  check
-  function slb_get_subscriptions($subscriber_id){
-  	$subscriptions = array();
+// hint: returns an array of list_id's
+function slb_get_subscriptions( $subscriber_id ) {
 
-  	//get subscriptions (returns array of list object)
+	$subscriptions = array();
 
-  	$lists = get_field('slb_subscriptions', $subscriber_id);
+	// get subscriptions (returns array of list objects)
+	$lists = get_field( slb_get_acf_key('slb_subscriptions'), $subscriber_id );
 
-  	// If $lists return something
-  	if($lists){
+	// IF $lists returns something
+	if( $lists ):
 
-  		// If $lists is an array and there is more than one item
-  		if(is_array($lists) && count($lists)){
+		// IF $lists is an array and there is one or more items
+		if( is_array($lists) && count($lists) ):
+			// build subscriptions: array of list id's
+			foreach( $lists as &$list):
+				$subscriptions[]= (int)$list->ID;
+			endforeach;
+		elseif( is_numeric($lists) ):
+			// single result returned
+			$subscriptions[]= $lists;
+		endif;
 
-  			// build lists: array of list ids
-  			foreach($lists as $list){
-  				$subscriptions[]= $list->ID;
-  			}
-  		} else if(is_numeric($lists)){
+	endif;
 
-  			// single result is returned
-  			$subscriptions[]= $lists;
+	return (array)$subscriptions;
 
-  		}
-  	}
-
-  	return (array)$subscriptions;
-  }
+}
 
 // 6.4
-  function slb_return_json( $php_array){
+function slb_return_json( $php_array ) {
 
-  	// encode result as json string
-  	$json_result = json_encode($php_array);
+	// encode result as json string
+	$json_result = json_encode( $php_array );
 
-  	// return result
-  	die($json_result);
+	// return result
+	die( $json_result );
 
-  	//stop all processing
-  	exit;
-  }
+	// stop all other processing
+	exit;
 
-// 6.5
-// gets the unqiue acf field from the field name
-  function slb_get_acf_key( $field_name ){
+}
 
-  	$field_key = ' ';
 
-  	switch ($field_name) {
-  		case 'slb_fname':
-  			$field_key = 'field_5a579ff87a3f0';
-  			break;
-  		case 'slb_lname':
-  			$field_key = 'field_5a57a0177a3f1';
-  			break;
-  		case 'slb_email':
-  			$field_key = 'field_5a57a02a7a3f2';
-  			break;
-  		case 'slb_subscriptions':
-  			$field_key = 'field_5a57a04f7a3f3';
-  			break;
-  	}
+//6.5
+// hint: gets the unique act field key from the field name
+function slb_get_acf_key( $field_name ) {
 
-  	return $field_key;
-  }
+	$field_key = $field_name;
+
+	switch( $field_name ) {
+
+		case 'slb_fname':
+			$field_key = 'field_55c8ec63416a2';
+			break;
+		case 'slb_lname':
+			$field_key = 'field_55c8ec76416a3';
+			break;
+		case 'slb_email':
+			$field_key = 'field_55c8ec87416a4';
+			break;
+		case 'slb_subscriptions':
+			$field_key = 'field_55c8ecac416a5';
+			break;
+
+	}
+
+	return $field_key;
+
+}
+
 
 // 6.6
- // returns an array of subscriber data including subscriptions
-  function slb_get_subscriber_data($subscriber_id){
+// hint: returns an array of subscriber data including subscriptions
+function slb_get_subscriber_data( $subscriber_id ) {
 
-  	// setup subscriber data
-  	$subscriber_data = array();
+	// setup subscriber_data
+	$subscriber_data = array();
 
-  	// get subscriber object
-  	$subscriber = get_post($subscriber_id);
+	// get subscriber object
+	$subscriber = get_post( $subscriber_id );
 
-  	// IF subscriber object is valid
-  	if( isset($subscriber->post_type) && $subscriber->post_type == 'slb_subscriber'){
+	// IF subscriber object is valid
+	if( isset($subscriber->post_type) && $subscriber->post_type == 'slb_subscriber' ):
 
-  		// build subscriber data for return
-  		$subscriber_data = array(
-  			'name' => $subscriber->title,
-  			'fname' => get_field(slb_get_acf_key('slb_fname'), $subscriber_id),
-  			'lname' => get_field(slb_get_acf_key('slb_lname'), $subscriber_id),
-  			'email' => get_field(slb_get_acf_key('slb_email'), $subscriber_id),
-  			'subscriptions' => slb_get_subscriptions($subscriber_id)
-  		);
-  	}
+		$fname = get_field( slb_get_acf_key('slb_fname'), $subscriber_id);
+		$lname = get_field( slb_get_acf_key('slb_lname'), $subscriber_id);
 
-  	return $subscriber_data;
-  }
-
-/***********************************************************************************************************************/
+		// build subscriber_data for return
+		$subscriber_data = array(
+			'name'=> $fname .' '. $lname,
+			'fname'=>$fname,
+			'lname'=>$lname,
+			'email'=>get_field( slb_get_acf_key('slb_email'), $subscriber_id),
+			'subscriptions'=>slb_get_subscriptions( $subscriber_id )
+		);
 
 
-/* 7. CUSTOM POST TYPES */
+	endif;
 
-/***********************************************************************************************************************/
+	// return subscriber_data
+	return $subscriber_data;
 
-
-/* 8. ADMIN PAGES */
-
-/***********************************************************************************************************************/
+}
 
 
-/* 9. SETTINGS */
 
-/***********************************************************************************************************************/
+/* !7. CUSTOM POST TYPES */
 
 
-?>
+
+
+/* !8. ADMIN PAGES */
+
+
+
+
+/* !9. SETTINGS */
