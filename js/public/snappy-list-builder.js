@@ -2,6 +2,7 @@
 jQuery(document).ready(function($){
 
 	// setup our wp ajax URL
+	// use document.location.protocol and document.location.host for websites
 	var wpajax_url = 'http://localhost:31337/WebDev2/wordpress/wp-admin/admin-ajax.php';
 
 	// email capture action url
@@ -28,7 +29,7 @@ jQuery(document).ready(function($){
 					// reset the form
 					$form[0].reset();
 					// notify the user of success
-					alert(data.message);
+						alert(data.message);
 				} else {
 					// error
 					// begin building our error message text
@@ -49,7 +50,7 @@ jQuery(document).ready(function($){
 
 		});
 
-		// stop the form from submitting normally
+		// stop the form from submitting normally7
 		return false;
 
 	});
