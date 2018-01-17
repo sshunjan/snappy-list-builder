@@ -40,6 +40,8 @@ Text Domain: snappy-list-builder
 		3.5 - slb_question_column_data()
 
 	4. External Scripts
+		4.1 - Include ACF plugin
+		4.2 - loads external files into PUBLIC website
 
 	5. Actions
 		5.1 - save subscription data to an existing or a new subscriber
@@ -55,6 +57,7 @@ Text Domain: snappy-list-builder
 		6.6 - slb_get_subscriber_data()
 
 	7. Custom Post Types
+		7.1 - subscribers
 
 	8. Admin Pages
 
@@ -100,6 +103,13 @@ add_action('wp_ajax_slb_save_subscription', 'slb_save_subscription'); // for adm
 //1.9
 // load external files
 add_action('wp_enqueue_scripts', 'slb_public_scripts');
+
+//1.8
+// add acf FILTERS
+add_filter('acf/settings/path', 'slb_acf_settings_path');
+add_filter('acf/settings/dir', 'slb_acf_settings_dir');
+add_filter('acf/settings/show_admin', 'slb_acf_show_admin');
+if( !defined('ACF_LITE') ) { define('ACF_LITE', true); } // turn off ACF plugin menu
 
 /***********************************************************************************************************************/
 
@@ -323,7 +333,12 @@ function slb_form_shortcode( $args, $content="") {
 
 
 /* 4. EXTERNAL SCRIPTS*/
-// 4.1
+
+//4.1
+// Include ACF plugin
+include_once(plugin_dir_path(__FILE__) . '/lib/advanced-custom-fields/acf.php');
+
+// 4.2
 // loads external files into PUBLIC website
 function slb_public_scripts(){
 
@@ -657,6 +672,7 @@ function slb_public_scripts(){
 
 /* !7. CUSTOM POST TYPES */
 
+	include_once(plugin_dir_path(__FILE__). 'cpt/slb_subscribers.php');
 
 
 
