@@ -1,5 +1,5 @@
 <?php
- include('functions.php');
+
 /*
 Plugin Name: Snappy List Builder
 Plugin URI: #
@@ -55,6 +55,8 @@ Text Domain: snappy-list-builder
 		6.6 - slb_get_subscriber_data()
 
 	7. Custom Post Types
+		7.1 - subscribers
+		7.2 - lists
 
 	8. Admin Pages
 
@@ -671,6 +673,9 @@ function slb_public_scripts(){
 // subscribers
 include_once( plugin_dir_path( __FILE__ ) . 'cpt/slb_subscribers.php');
 
+//7.2
+// lists
+include_once(plugin_dir_path(__FILE__) . 'cpt/slb_list.php');
 
 
 /* !8. ADMIN PAGES */
